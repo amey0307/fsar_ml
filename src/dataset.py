@@ -1,9 +1,8 @@
 import torch
 from torch.utils.data import Dataset
 import os
-from .preprocess import read_skeleton_file, normalize_skeleton
 import numpy as np
-
+from .preprocess import read_skeleton_file, normalize_skeleton
 
 class NTUSkeletonDataset(Dataset):
     def __init__(self, data_dir, subject_ids=None, transform=None):
@@ -11,8 +10,8 @@ class NTUSkeletonDataset(Dataset):
         for root, _, filenames in os.walk(data_dir):
             for file in filenames:
                 if file.endswith('.skeleton'):
-                    subject_id = file[0:4]  # 'S001', 'S002', etc.
-                    if (subject_ids is None) or (subject_id in subject_ids):
+                    subject_id = file[:4]  # 'S001'
+                    if subject_ids is None or subject_id in subject_ids:
                         self.files.append(os.path.join(root, file))
         print(f"Loaded {len(self.files)} files for subjects: {subject_ids}")
         self.transform = transform
@@ -32,7 +31,10 @@ class NTUSkeletonDataset(Dataset):
         else:
             skeleton = skeleton[:max_frames]
         skeleton = torch.tensor(skeleton, dtype=torch.float32).permute(2, 1, 0)
-        label = torch.tensor(0, dtype=torch.long)  # Update label extraction as needed
+        # Extract and zero-base action label
+        filename = os.path.basename(file_path)
+        action_id = int(filename[17:20]) - 1
+        label = torch.tensor(action_id, dtype=torch.long)
         if self.transform:
             skeleton = self.transform(skeleton)
         return skeleton, label
